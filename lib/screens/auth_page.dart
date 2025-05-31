@@ -176,7 +176,7 @@ class _AuthPageState extends State<AuthPage> {
                           const SizedBox(height: 12),
                           Text(
                             _isLogin
-                                ? 'Nikmati film seru dan pengalaman tak terlupakan.'
+                                ? 'Nikmati restoran seru dan pengalaman tak terlupakan.'
                                 : 'Daftar sekarang dan temukan favorit barumu.',
                             style: TextStyle(
                               fontSize: 16,
