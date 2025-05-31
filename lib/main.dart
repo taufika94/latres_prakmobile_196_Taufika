@@ -1,25 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:app/movie/movie.dart'; // Pastikan ini diimpor
+import 'package:app/restaurant/restaurant.dart'; // Pastikan ini diimpor
 import 'package:app/screens/auth_page.dart';
-import 'package:app/screens/movie_list_page.dart';
+import 'package:app/screens/restaurant_list_page.dart';
 import 'package:app/screens/favorites_page.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Pastikan ini ditambahkan
+  WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
-  Hive.registerAdapter(MovieAdapter()); // Daftarkan adapter Movie
-  runApp(const MovieApp());
+
+  // Daftarkan semua adapter yang digenerate oleh Hive
+  Hive.registerAdapter(RestaurantAdapter()); // Untuk kelas Restaurant
+  Hive.registerAdapter(
+    RestaurantDetailAdapter(),
+  ); // Untuk kelas RestaurantDetail
+  Hive.registerAdapter(CategoryAdapter()); // Untuk kelas Category
+  Hive.registerAdapter(MenusAdapter()); // Untuk kelas Menus
+  Hive.registerAdapter(MenuItemAdapter()); // Untuk kelas MenuItem
+  Hive.registerAdapter(CustomerReviewAdapter()); // Untuk kelas CustomerReview
+
+  runApp(const RestaurantApp());
 }
 
-class MovieApp extends StatelessWidget {
-  const MovieApp({super.key});
+class RestaurantApp extends StatelessWidget {
+  const RestaurantApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Movie App',
+      title: 'Restaurant App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.deepOrange,
@@ -33,7 +43,7 @@ class MovieApp extends StatelessWidget {
       ),
       home: const AuthPage(),
       routes: {
-        '/home': (context) => const MovieListPage(),
+        '/home': (context) => const RestaurantListPage(),
         '/favorites': (context) => const FavoritesPage(),
       },
     );

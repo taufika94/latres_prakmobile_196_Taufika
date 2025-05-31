@@ -1,19 +1,28 @@
+// lib/api_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../movie/movie.dart';
+import '../restaurant/restaurant.dart'; // Import the new Restaurant model
 
 class ApiService {
-  static const String _baseUrl = 'https://681388b3129f6313e2119693.mockapi.io';
+  // Dicoding Restaurant API base URLs
+  static const String _baseUrl = 'https://restaurant-api.dicoding.dev';
+  static const String _listUrl = '$_baseUrl/list';
+  static const String _detailUrl = '$_baseUrl/detail/'; // Note the trailing slash
+  static const String _searchUrl = '$_baseUrl/search?q=';
+  static const String _smallImageUrl = '$_baseUrl/images/small/';
+  static const String _mediumImageUrl = '$_baseUrl/images/medium/';
+  static const String _largeImageUrl = '$_baseUrl/images/large/';
+
   static const Duration _timeoutDuration = Duration(seconds: 10);
 
-  // Get all movies
-  static Future<List<Movie>> getMovies() async {
+  // Get all restaurants
+  static Future<List<Restaurant>> getRestaurants() async {
     try {
-      print('Fetching movies from: $_baseUrl/api/v1/movie');
-      
+      print('Fetching restaurants from: $_listUrl');
+
       final response = await http
           .get(
-            Uri.parse('$_baseUrl/api/v1/movie'),
+            Uri.parse(_listUrl),
             headers: {
               'Content-Type': 'application/json',
             },
@@ -25,37 +34,32 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final dynamic data = json.decode(response.body);
-        
-        // Check if response is directly an array or wrapped in an object
-        List<dynamic> moviesJson;
-        if (data is List) {
-          moviesJson = data;
-        } else if (data is Map && data['movies'] != null) {
-          moviesJson = data['movies'];
-        } else if (data is Map && data['data'] != null) {
-          moviesJson = data['data'];
-        } else {
-          throw Exception('Unexpected response format');
-        }
 
-        return moviesJson
-            .map((json) => Movie.fromJson(json as Map<String, dynamic>))
-            .toList();
+        // Check for "error": false and "restaurants" key as per Dicoding API structure
+        if (data is Map && data['error'] == false && data['restaurants'] != null) {
+          final List<dynamic> restaurantsJson = data['restaurants'];
+          return restaurantsJson
+              .map((json) => Restaurant.fromJson(json as Map<String, dynamic>))
+              .toList();
+        } else {
+          // If response format is unexpected or error is true
+          throw Exception('Unexpected response format or API error: ${data['message'] ?? 'Unknown error'}');
+        }
       } else {
         throw _handleError(response.statusCode, response.body);
       }
     } catch (e) {
-      print('Error in getMovies: $e');
+      print('Error in getRestaurants: $e');
       throw _handleNetworkError(e);
     }
   }
 
-  // Search movies
-  static Future<List<Movie>> searchMovies(String query) async {
+  // Search restaurants
+  static Future<List<Restaurant>> searchRestaurants(String query) async {
     try {
       final response = await http
           .get(
-            Uri.parse('$_baseUrl/api/v1/movie?search=$query'),
+            Uri.parse('$_searchUrl$query'), // Use the search URL
             headers: {
               'Content-Type': 'application/json',
             },
@@ -63,128 +67,126 @@ class ApiService {
           .timeout(_timeoutDuration);
 
       print('Search API Response: ${response.statusCode}');
+      print('Search API Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final dynamic data = json.decode(response.body);
-        
-        List<dynamic> moviesJson;
-        if (data is List) {
-          moviesJson = data;
-        } else if (data is Map && data['movies'] != null) {
-          moviesJson = data['movies'];
-        } else {
-          return [];
-        }
 
-        // Filter locally if API doesn't support search
-        final allMovies = moviesJson
-            .map((json) => Movie.fromJson(json as Map<String, dynamic>))
-            .toList();
-            
-        return allMovies
-            .where((movie) =>
-                movie.title.toLowerCase().contains(query.toLowerCase()) ||
-                movie.description.toLowerCase().contains(query.toLowerCase()) ||
-                (movie.genres?.any((genre) => 
-                    genre.toLowerCase().contains(query.toLowerCase())) ?? false))
-            .toList();
+        // Dicoding search API returns `error: true` if no results are found.
+        if (data is Map && data['error'] == false && data['restaurants'] != null) {
+          final List<dynamic> restaurantsJson = data['restaurants'];
+          return restaurantsJson
+              .map((json) => Restaurant.fromJson(json as Map<String, dynamic>))
+              .toList();
+        } else if (data is Map && data['error'] == true) {
+          // If search yields no results, API returns error:true with message.
+          // In this case, we return an empty list, which is often more user-friendly.
+          print('Search returned no results: ${data['message']}');
+          return [];
+        } else {
+          throw Exception('Unexpected response format or API error: ${data['message'] ?? 'Unknown error'}');
+        }
       } else {
         throw _handleError(response.statusCode, response.body);
       }
     } catch (e) {
-      print('Error in searchMovies: $e');
+      print('Error in searchRestaurants: $e');
       throw _handleNetworkError(e);
     }
   }
 
-  // Get movie by ID
-  static Future<Movie> getMovieDetail(String id) async {
+  // Get restaurant by ID (using RestaurantDetail model for full data)
+  static Future<RestaurantDetail> getRestaurantDetail(String id) async {
     try {
       final response = await http
           .get(
-            Uri.parse('$_baseUrl/api/v1/movie/$id'),
+            Uri.parse('$_detailUrl$id'), // Use the detail URL
             headers: {
               'Content-Type': 'application/json',
             },
           )
           .timeout(_timeoutDuration);
 
+      print('Detail API Response: ${response.statusCode}');
+      print('Detail API Body: ${response.body}');
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
-        
-        // Handle different response formats
-        if (data['movie'] != null) {
-          return Movie.fromJson(data['movie']);
-        } else if (data['data'] != null) {
-          return Movie.fromJson(data['data']);
+
+        // Check for "error": false and "restaurant" key
+        if (data['error'] == false && data['restaurant'] != null) {
+          return RestaurantDetail.fromJson(data['restaurant']);
         } else {
-          return Movie.fromJson(data);
+          throw Exception('Unexpected response format or API error: ${data['message'] ?? 'Unknown error'}');
         }
       } else {
         throw _handleError(response.statusCode, response.body);
       }
     } catch (e) {
-      print('Error in getMovieDetail: $e');
+      print('Error in getRestaurantDetail: $e');
       throw _handleNetworkError(e);
     }
   }
 
-  // Add new movie (if API supports it)
-  static Future<Movie> addMovie(Movie movie) async {
+  // Dicoding API for restaurants does not support POST, PUT, DELETE for public use.
+  // These methods are commented out as they are not applicable for this API.
+  /*
+  // Add new restaurant (if API supports it)
+  static Future<Restaurant> addRestaurant(Restaurant restaurant) async {
     try {
       final response = await http
           .post(
-            Uri.parse('$_baseUrl/api/v1/movie'),
+            Uri.parse('$_baseUrl/api/v1/restaurant'), // Adjust endpoint if needed
             headers: {
               'Content-Type': 'application/json',
             },
-            body: json.encode(movie.toJson()),
+            body: json.encode(restaurant.toJson()),
           )
           .timeout(_timeoutDuration);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
-        return Movie.fromJson(data);
+        return Restaurant.fromJson(data);
       } else {
         throw _handleError(response.statusCode, response.body);
       }
     } catch (e) {
-      print('Error in addMovie: $e');
+      print('Error in addRestaurant: $e');
       throw _handleNetworkError(e);
     }
   }
 
-  // Update movie (if API supports it)
-  static Future<Movie> updateMovie(String id, Movie movie) async {
+  // Update restaurant (if API supports it)
+  static Future<Restaurant> updateRestaurant(String id, Restaurant restaurant) async {
     try {
       final response = await http
           .put(
-            Uri.parse('$_baseUrl/api/v1/movie/$id'),
+            Uri.parse('$_baseUrl/api/v1/restaurant/$id'), // Adjust endpoint if needed
             headers: {
               'Content-Type': 'application/json',
             },
-            body: json.encode(movie.toJson()),
+            body: json.encode(restaurant.toJson()),
           )
           .timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
-        return Movie.fromJson(data);
+        return Restaurant.fromJson(data);
       } else {
         throw _handleError(response.statusCode, response.body);
       }
     } catch (e) {
-      print('Error in updateMovie: $e');
+      print('Error in updateRestaurant: $e');
       throw _handleNetworkError(e);
     }
   }
 
-  // Delete movie (if API supports it)
-  static Future<bool> deleteMovie(String id) async {
+  // Delete restaurant (if API supports it)
+  static Future<bool> deleteRestaurant(String id) async {
     try {
       final response = await http
           .delete(
-            Uri.parse('$_baseUrl/api/v1/movie/$id'),
+            Uri.parse('$_baseUrl/api/v1/restaurant/$id'), // Adjust endpoint if needed
             headers: {
               'Content-Type': 'application/json',
             },
@@ -193,17 +195,25 @@ class ApiService {
 
       return response.statusCode == 200 || response.statusCode == 204;
     } catch (e) {
-      print('Error in deleteMovie: $e');
+      print('Error in deleteRestaurant: $e');
       return false;
     }
   }
+  */
 
-  // Get image URL helper
-  static String getImageUrl(String imageUrl, {required String size}) {
-    if (imageUrl.startsWith('http')) {
-      return imageUrl;
+  // Get image URL helper for Dicoding API
+  static String getImageUrl(String pictureId, {String size = 'small'}) {
+    switch (size.toLowerCase()) {
+      case 'small':
+        return '$_smallImageUrl$pictureId';
+      case 'medium':
+        return '$_mediumImageUrl$pictureId';
+      case 'large':
+        return '$_largeImageUrl$pictureId';
+      default:
+        // Fallback to small if an invalid size is provided
+        return '$_smallImageUrl$pictureId';
     }
-    return '$_baseUrl/images/$imageUrl';
   }
 
   // Error handling
@@ -235,6 +245,9 @@ class ApiService {
       return Exception('No internet connection available.');
     } else if (error.toString().contains('FormatException')) {
       return Exception('Invalid data format received from server.');
+    } else if (error is http.ClientException) {
+      // Handle http client specific errors like network unreachable etc.
+      return Exception('HTTP Client Error: ${error.message}');
     } else if (error is Exception) {
       return error;
     } else {

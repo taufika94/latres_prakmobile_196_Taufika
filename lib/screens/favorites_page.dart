@@ -1,9 +1,9 @@
-import 'package:app/movie/MovieDatabase.dart';
-import 'package:app/screens/movie_detail_page.dart';
+import 'package:app/restaurant/RestaurantDatabase.dart';
+import 'package:app/screens/restaurant_detail_page.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../movie/movie.dart';
-import '../services/api_service.dart';// Import MovieDatabase
+import '../restaurant/restaurant.dart';
+import '../services/api_service.dart';
 
 const Color primaryColor = Color(0xFF8D6B94);
 const Color secondaryColor = Color(0xFFB15A7B);
@@ -19,12 +19,12 @@ class FavoritesPage extends StatefulWidget {
 }
 
 class _FavoritesPageState extends State<FavoritesPage> {
-  final MovieDatabase _movieDatabase = MovieDatabase();
-  List<Movie> _favoriteMovies = [];
+  final RestaurantDatabase _restaurantDatabase = RestaurantDatabase();
+  List<Restaurant> _favoriteRestaurants = [];
   bool _isLoading = true;
   String _errorMessage = '';
   bool _isSelectionMode = false;
-  final Set<String> _selectedMovies = {};
+  final Set<String> _selectedRestaurants = {};
 
   @override
   void initState() {
@@ -42,7 +42,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
     final username = prefs.getString('username') ?? 'User ';
 
     try {
-      _favoriteMovies = await _movieDatabase.getMovies(username); // Ambil berdasarkan username
+      _favoriteRestaurants = await _restaurantDatabase.getRestaurants(username);
     } catch (e) {
       setState(() {
         _errorMessage = "Gagal memuat favorit: ${e.toString()}";
@@ -54,10 +54,10 @@ class _FavoritesPageState extends State<FavoritesPage> {
     }
   }
 
-  Future<void> _removeFavorite(String movieId) async {
+  Future<void> _removeFavorite(String restaurantId) async {
     final prefs = await SharedPreferences.getInstance();
     final username = prefs.getString('username') ?? 'User ';
-    await _movieDatabase.deleteMovie(movieId, username); // Hapus berdasarkan username
+    await _restaurantDatabase.deleteRestaurant(restaurantId, username);
     await _loadFavorites();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -75,20 +75,20 @@ class _FavoritesPageState extends State<FavoritesPage> {
   }
 
   Future<void> _removeSelectedFavorites() async {
-    if (_selectedMovies.isEmpty) return;
+    if (_selectedRestaurants.isEmpty) return;
 
     final prefs = await SharedPreferences.getInstance();
     final username = prefs.getString('username') ?? 'User ';
 
-    for (final id in _selectedMovies) {
-      await _movieDatabase.deleteMovie(id, username); // Hapus berdasarkan username
+    for (final id in _selectedRestaurants) {
+      await _restaurantDatabase.deleteRestaurant(id, username);
     }
 
     await _loadFavorites();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${_selectedMovies.length} Movie dihapus dari favorit!'),
+          content: Text('${_selectedRestaurants.length} Restoran dihapus dari favorit!'),
           backgroundColor: secondaryColor,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -104,20 +104,20 @@ class _FavoritesPageState extends State<FavoritesPage> {
     setState(() {
       _isSelectionMode = !_isSelectionMode;
       if (!_isSelectionMode) {
-        _selectedMovies.clear();
+        _selectedRestaurants.clear();
       }
     });
   }
 
-  void _toggleMovieSelection(String movieId) {
+  void _toggleRestaurantSelection(String restaurantId) {
     setState(() {
-      if (_selectedMovies.contains(movieId)) {
-        _selectedMovies.remove(movieId);
+      if (_selectedRestaurants.contains(restaurantId)) {
+        _selectedRestaurants.remove(restaurantId);
       } else {
-        _selectedMovies.add(movieId);
+        _selectedRestaurants.add(restaurantId);
       }
 
-      if (_selectedMovies.isEmpty) {
+      if (_selectedRestaurants.isEmpty) {
         _isSelectionMode = false;
       }
     });
@@ -149,24 +149,24 @@ class _FavoritesPageState extends State<FavoritesPage> {
       foregroundColor: lightestBackgroundColor,
       elevation: 0,
       title: _isSelectionMode
-          ? Text('${_selectedMovies.length} dipilih',
+          ? Text('${_selectedRestaurants.length} dipilih',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.8,
               ))
           : const Text(
-              'Movie Favorit',
+              'Restoran Favorit',
               style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.8),
             ),
       centerTitle: true,
       actions: [
-        if (_favoriteMovies.isNotEmpty && !_isLoading && _errorMessage.isEmpty)
+        if (_favoriteRestaurants.isNotEmpty && !_isLoading && _errorMessage.isEmpty)
           IconButton(
             icon: Icon(_isSelectionMode ? Icons.close : Icons.select_all),
             onPressed: _toggleSelectionMode,
             tooltip: _isSelectionMode ? 'Batal' : 'Pilih',
           ),
-        if (_isSelectionMode && _selectedMovies.isNotEmpty)
+        if (_isSelectionMode && _selectedRestaurants.isNotEmpty)
           IconButton(
             icon: const Icon(Icons.delete),
             onPressed: _removeSelectedFavorites,
@@ -225,7 +225,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
       );
     }
 
-    if (_favoriteMovies.isEmpty) {
+    if (_favoriteRestaurants.isEmpty) {
       return _buildEmptyState();
     }
 
@@ -234,21 +234,21 @@ class _FavoritesPageState extends State<FavoritesPage> {
       color: secondaryColor,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        itemCount: _favoriteMovies.length,
+        itemCount: _favoriteRestaurants.length,
         itemBuilder: (context, index) {
-          final movie = _favoriteMovies[index];
-          final isSelected = _selectedMovies.contains(movie.id);
+          final restaurant = _favoriteRestaurants[index];
+          final isSelected = _selectedRestaurants.contains(restaurant.id);
           return _isSelectionMode
-              ? _buildSelectableMovieCard(movie, isSelected)
-              : _buildDismissibleMovieCard(movie);
+              ? _buildSelectableRestaurantCard(restaurant, isSelected)
+              : _buildDismissibleRestaurantCard(restaurant);
         },
       ),
     );
   }
 
-  Widget _buildSelectableMovieCard(Movie movie, bool isSelected) {
+  Widget _buildSelectableRestaurantCard(Restaurant restaurant, bool isSelected) {
     return GestureDetector(
-      onTap: () => _toggleMovieSelection(movie.id),
+      onTap: () => _toggleRestaurantSelection(restaurant.id),
       child: Container(
         margin: const EdgeInsets.only(bottom: 20),
         decoration: BoxDecoration(
@@ -260,7 +260,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
         ),
         child: Stack(
           children: [
-            _buildMovieCardContent(movie),
+            _buildRestaurantCardContent(restaurant),
             if (isSelected)
               Positioned(
                 top: 10,
@@ -288,7 +288,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
           Icon(Icons.favorite_border, size: 80, color: accentColor),
           const SizedBox(height: 24),
           Text(
-            'Belum ada Movie favorit.',
+            'Belum ada restoran favorit.',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -298,7 +298,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Tambahkan beberapa dari daftar Movie utama Anda!',
+            'Tambahkan beberapa dari daftar restoran utama Anda!',
             style: TextStyle(
               fontSize: 16,
               color: primaryColor.withOpacity(0.7),
@@ -318,16 +318,16 @@ class _FavoritesPageState extends State<FavoritesPage> {
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Jelajahi Movie', style: TextStyle(fontSize: 16)),
+            child: const Text('Jelajahi Restoran', style: TextStyle(fontSize: 16)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDismissibleMovieCard(Movie movie) {
+  Widget _buildDismissibleRestaurantCard(Restaurant restaurant) {
     return Dismissible(
-      key: Key(movie.id),
+      key: Key(restaurant.id),
       background: Container(
         decoration: BoxDecoration(
           color: secondaryColor.withOpacity(0.8),
@@ -355,7 +355,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
               ),
             ),
             content: Text(
-              'Anda yakin ingin menghapus ${movie.title} dari daftar favorit?',
+              'Anda yakin ingin menghapus ${restaurant.name} dari daftar favorit?',
               style: TextStyle(color: primaryColor.withOpacity(0.8)),
             ),
             actions: [
@@ -384,12 +384,12 @@ class _FavoritesPageState extends State<FavoritesPage> {
           ),
         );
       },
-      onDismissed: (direction) => _removeFavorite(movie.id),
-      child: _buildMovieCardContent(movie),
+      onDismissed: (direction) => _removeFavorite(restaurant.id),
+      child: _buildRestaurantCardContent(restaurant),
     );
   }
 
-  Widget _buildMovieCardContent(Movie movie) {
+  Widget _buildRestaurantCardContent(Restaurant restaurant) {
     return Card(
       margin: EdgeInsets.zero,
       elevation: 8,
@@ -403,7 +403,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => MovieDetailPage(movieId: movie.id),
+                    builder: (context) => RestaurantDetailPage(restaurantId: restaurant.id),
                   ),
                 ).then((_) => _loadFavorites());
               },
@@ -411,13 +411,13 @@ class _FavoritesPageState extends State<FavoritesPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Hero(
-              tag: 'movieImage_${movie.id}',
+              tag: 'restaurantImage_${restaurant.id}',
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(20),
                 ),
                 child: Image.network(
-                  ApiService.getImageUrl(movie.imgUrl, size: 'medium'),
+                  ApiService.getImageUrl(restaurant.pictureId, size: 'medium'), // Changed from imgUrl to pictureId
                   height: 220,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -442,7 +442,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                       height: 220,
                       color: lightestBackgroundColor,
                       child: Icon(
-                        Icons.movie_outlined,
+                        Icons.restaurant_menu_outlined,
                         size: 80,
                         color: primaryColor.withOpacity(0.6),
                       ),
@@ -457,7 +457,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    movie.title,
+                    restaurant.name,
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -469,11 +469,11 @@ class _FavoritesPageState extends State<FavoritesPage> {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      Icon(Icons.calendar_today, size: 16, color: secondaryColor),
+                      Icon(Icons.location_on, size: 16, color: secondaryColor),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          movie.releaseDate,
+                          restaurant.city, // Changed from movie.releaseDate to restaurant.city
                           style: TextStyle(
                             color: primaryColor.withOpacity(0.8),
                             fontSize: 14,
@@ -490,7 +490,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        movie.rating,
+                        restaurant.rating.toStringAsFixed(1), // Display rating with 1 decimal place
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -500,54 +500,33 @@ class _FavoritesPageState extends State<FavoritesPage> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.access_time, size: 16, color: secondaryColor),
-                      const SizedBox(width: 8),
-                      Text(
-                        movie.duration,
-                        style: TextStyle(
-                          color: primaryColor.withOpacity(0.8),
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Icon(Icons.language, size: 16, color: secondaryColor),
-                      const SizedBox(width: 8),
-                      Text(
-                        movie.language,
-                        style: TextStyle(
-                          color: primaryColor.withOpacity(0.8),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (movie.genres != null && movie.genres!.isNotEmpty)
+                  // Removed priceRange and contact as they are not directly in the base Restaurant model
+                  // If you need to display these, you'd need to fetch RestaurantDetail or include them in the base Restaurant model.
+                  if (restaurant is RestaurantDetail && restaurant.categories != null && restaurant.categories!.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 10),
                       child: Wrap(
                         spacing: 6,
                         runSpacing: 4,
-                        children: movie.genres!.map((genre) {
+                        children: restaurant.categories!.map((category) {
                           return Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: _getGenreColor(genre).withOpacity(0.2),
+                              color: _getCategoryColor(category.name).withOpacity(0.2),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: _getGenreColor(genre).withOpacity(0.5),
+                                color: _getCategoryColor(category.name).withOpacity(0.5),
                                 width: 1,
                               ),
                             ),
                             child: Text(
-                              genre,
+                              category.name,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: _getGenreColor(genre),
+                                color: _getCategoryColor(category.name),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -564,36 +543,27 @@ class _FavoritesPageState extends State<FavoritesPage> {
     );
   }
 
-  Color _getGenreColor(String genre) {
-    switch (genre.toLowerCase()) {
-      case 'action':
-        return Colors.red.shade700;
-      case 'comedy':
-        return Colors.orange.shade700;
-      case 'drama':
-        return Colors.blue.shade700;
-      case 'horror':
-        return Colors.purple.shade700;
-      case 'romance':
-        return Colors.pink.shade700;
-      case 'thriller':
-        return Colors.grey.shade700;
-      case 'sci-fi':
-      case 'science fiction':
-        return Colors.cyan.shade700;
-      case 'fantasy':
-        return Colors.indigo.shade700;
-      case 'adventure':
+  // Renamed _getCuisineColor to _getCategoryColor to align with RestaurantDetail
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'italian':
         return Colors.green.shade700;
-      case 'mystery':
+      case 'modern american':
+        return Colors.blue.shade700;
+      case 'korean':
+        return Colors.red.shade700;
+      case 'cafe':
         return Colors.brown.shade700;
+      case 'asia':
+        return Colors.orange.shade700;
+      // Add more cases for other categories if needed
       default:
         return primaryColor;
     }
   }
 }
 
-// Custom Painter untuk pola latar belakang
+// Custom Painter untuk pola latar belakang (Tidak ada perubahan)
 class _BackgroundPatternPainter extends CustomPainter {
   final Color patternColor;
 

@@ -1,9 +1,9 @@
-import 'package:app/movie/MovieDatabase.dart';
+import 'package:app/restaurant/RestaurantDatabase.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart'; // Tambahkan import untuk format tanggal
+import 'package:intl/intl.dart';
 import '../services/api_service.dart';
-import '../movie/movie.dart';
+import '../restaurant/restaurant.dart'; // Ensure this imports the correct Restaurant and RestaurantDetail models
 
 // Definisi Warna dari Palet yang Diberikan
 const Color primaryColor = Color(0xFF8D6B94); // Ungu tua/abu-abu
@@ -26,65 +26,66 @@ PENJELASAN STATEFUL vs STATELESS:
   3. Bersifat statis/tidak berinteraksi
 
 Dalam halaman ini kita menggunakan StatefulWidget karena:
-1. Perlu menyimpan data movie yang di-load dari API
+1. Perlu menyimpan data restaurant yang di-load dari API
 2. Perlu mengelola status loading/error
-3. Perlu mengubah tampilan saat movie di-favoritkan
+3. Perlu mengubah tampilan saat restaurant di-favoritkan
 4. Perlu menyimpan state favorit ke SharedPreferences
 */
 
-// Komponen halaman detail movie
-class MovieDetailPage extends StatefulWidget {
-  final String movieId; // ID movie yang akan ditampilkan, berasal dari navigasi sebelumnya
+// Komponen halaman detail restaurant
+class RestaurantDetailPage extends StatefulWidget {
+  final String restaurantId; // ID restaurant yang akan ditampilkan, berasal dari navigasi sebelumnya
 
-  const MovieDetailPage({super.key, required this.movieId});
+  const RestaurantDetailPage({super.key, required this.restaurantId});
 
   @override
-  State<MovieDetailPage> createState() => _MovieDetailPageState();
+  State<RestaurantDetailPage> createState() => _RestaurantDetailPageState();
 }
 
-class _MovieDetailPageState extends State<MovieDetailPage> {
-  late Movie _movie;
+class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
+  late RestaurantDetail _restaurant; // Changed from Movie to RestaurantDetail
   bool _isLoading = true;
   bool _isFavorite = false;
   String _errorMessage = '';
-  final MovieDatabase _movieDatabase = MovieDatabase(); // Instance MovieDatabase
+  final RestaurantDatabase _restaurantDatabase = RestaurantDatabase(); // Instance RestaurantDatabase
 
   @override
   void initState() {
     super.initState();
-    _loadMovieDetail();
-    _checkFavoriteStatus(); // Mengecek apakah movie ini telah difavoritkan sebelumnya oleh user
+    _loadRestaurantDetail();
+    _checkFavoriteStatus(); // Mengecek apakah restaurant ini telah difavoritkan sebelumnya oleh user
   }
 
-  // Mengambil detail movie dari API
-  Future<void> _loadMovieDetail() async {
+  // Mengambil detail restaurant dari API
+  Future<void> _loadRestaurantDetail() async {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
 
     try {
-      final data = await ApiService.getMovieDetail(widget.movieId); // Fetch detail dari API
-      setState(() => _movie = data); // Simpan hasil ke state
+      // Assuming ApiService.getRestaurantDetail exists and returns RestaurantDetail
+      final data = await ApiService.getRestaurantDetail(widget.restaurantId);
+      setState(() => _restaurant = data);
     } catch (e) {
-      setState(() => _errorMessage = e.toString().replaceFirst("Exception: ", "")); // Tangani error
+      setState(() => _errorMessage = e.toString().replaceFirst("Exception: ", ""));
     } finally {
-      setState(() => _isLoading = false); // Sembunyikan loading spinner
+      setState(() => _isLoading = false);
     }
   }
 
-  // Mengecek apakah movie ini sudah ada dalam daftar favorit di SharedPreferences
+  // Mengecek apakah restaurant ini sudah ada dalam daftar favorit di SharedPreferences
   Future<void> _checkFavoriteStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    final username = prefs.getString('username') ?? 'User ';
-    final favoriteMovies = await _movieDatabase.getMovies(username);
+    final username = prefs.getString('username') ?? 'User';
+    final favoriteRestaurants = await _restaurantDatabase.getRestaurants(username); // Changed to getRestaurants
 
     setState(() {
-      _isFavorite = favoriteMovies.any((movie) => movie.id == widget.movieId); // Cek apakah movie ada di daftar
+      _isFavorite = favoriteRestaurants.any((restaurant) => restaurant.id == widget.restaurantId); // Cek apakah restaurant ada di daftar
     });
   }
 
-  // Menambahkan atau menghapus movie dari daftar favorit user
+  // Menambahkan atau menghapus restaurant dari daftar favorit user
   Future<void> _toggleFavorite() async {
     final prefs = await SharedPreferences.getInstance();
     final username = prefs.getString('username') ?? 'default_user';
@@ -93,22 +94,22 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
 
     if (_isFavorite) {
       // Jika ditambahkan ke favorit
-      await _movieDatabase.addMovie(_movie, username); // Simpan film ke Hive
+      await _restaurantDatabase.addRestaurant(_restaurant, username); // Simpan restaurant ke Hive
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Film ditambahkan ke favorit!'),
+            content: Text('Restoran ditambahkan ke favorit!'),
             backgroundColor: Color.fromARGB(255, 67, 102, 70),
           ),
         );
       }
     } else {
       // Jika dihapus dari favorit
-      await _movieDatabase.deleteMovie(_movie.id, username); // Hapus film dari Hive
+      await _restaurantDatabase.deleteRestaurant(_restaurant.id, username); // Hapus restaurant dari Hive
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Film dihapus dari favorit!'),
+            content: Text('Restoran dihapus dari favorit!'),
             backgroundColor: Color.fromARGB(255, 209, 47, 47),
           ),
         );
@@ -116,19 +117,17 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     }
   }
 
-
-  // Helper method untuk format tanggal createdAt
-  String _formatCreatedAt(String? createdAt) {
-    if (createdAt == null || createdAt.isEmpty) {
+  // Helper method untuk format tanggal (if needed for reviews, etc.)
+  String _formatDate(String? date) {
+    if (date == null || date.isEmpty) {
       return 'Tidak diketahui';
     }
-    
     try {
-      final DateTime dateTime = DateTime.parse(createdAt);
+      final DateTime dateTime = DateTime.parse(date);
       final DateFormat formatter = DateFormat('dd MMM yyyy');
       return formatter.format(dateTime);
     } catch (e) {
-      return createdAt; // Return original string jika parsing gagal
+      return date; // Return original string jika parsing gagal
     }
   }
 
@@ -141,7 +140,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
           ? Center(child: CircularProgressIndicator(color: secondaryColor)) // Tampilkan loading saat memuat data
           : _errorMessage.isNotEmpty
               ? _buildErrorState() // Jika error, tampilkan pesan error
-              : _buildDetailBody(), // Jika sukses, tampilkan detail movie
+              : _buildDetailBody(), // Jika sukses, tampilkan detail restaurant
     );
   }
 
@@ -171,7 +170,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: _loadMovieDetail,
+            onPressed: _loadRestaurantDetail,
             style: ElevatedButton.styleFrom(
               backgroundColor: secondaryColor,
               foregroundColor: Colors.white,
@@ -185,7 +184,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     );
   }
 
-  // UI utama yang menampilkan detail movie setelah data berhasil dimuat
+  // UI utama yang menampilkan detail restaurant setelah data berhasil dimuat
   Widget _buildDetailBody() {
     return CustomScrollView(
       slivers: [
@@ -195,7 +194,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
           backgroundColor: primaryColor,
           flexibleSpace: FlexibleSpaceBar(
             title: Text(
-              _movie.title,
+              _restaurant.name,
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -213,15 +212,15 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
               fit: StackFit.expand,
               children: [
                 Hero(
-                  tag: 'movieImage_${_movie.id}',
+                  tag: 'restaurantImage_${_restaurant.id}',
                   child: Image.network(
-                    ApiService.getImageUrl(_movie.imgUrl, size: 'large'),
+                    ApiService.getImageUrl(_restaurant.pictureId, size: 'large'), // Use pictureId for restaurants
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
                         color: lightBackgroundColor,
                         child: Icon(
-                          Icons.movie,
+                          Icons.restaurant, // Changed icon to restaurant
                           size: 80,
                           color: primaryColor.withOpacity(0.6),
                         ),
@@ -267,19 +266,24 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                 _buildSectionHeader('Deskripsi'),
                 _buildDescriptionCard(),
                 const SizedBox(height: 20),
-                if (_movie.genres != null && _movie.genres!.isNotEmpty) ...[
-                  _buildSectionHeader('Genre'),
-                  _buildGenresCard(),
+                if (_restaurant.address.isNotEmpty) ...[
+                  _buildSectionHeader('Alamat'),
+                  _buildAddressCard(),
                   const SizedBox(height: 20),
                 ],
-                if (_movie.cast != null && _movie.cast!.isNotEmpty) ...[
-                  _buildSectionHeader('Pemeran'),
-                  _buildCastCard(),
+                if (_restaurant.categories != null && _restaurant.categories!.isNotEmpty) ...[
+                  _buildSectionHeader('Kategori'),
+                  _buildCategoriesCard(),
                   const SizedBox(height: 20),
                 ],
-                if (_movie.director != null && _movie.director!.isNotEmpty) ...[
-                  _buildSectionHeader('Sutradara'),
-                  _buildDirectorCard(),
+                if (_restaurant.menus != null && (_restaurant.menus!.foods!.isNotEmpty || _restaurant.menus!.drinks!.isNotEmpty)) ...[
+                  _buildSectionHeader('Menu'),
+                  _buildMenusCard(),
+                  const SizedBox(height: 20),
+                ],
+                if (_restaurant.customerReviews != null && _restaurant.customerReviews!.isNotEmpty) ...[
+                  _buildSectionHeader('Ulasan Pelanggan'),
+                  _buildCustomerReviewsCard(),
                 ],
               ],
             ),
@@ -304,7 +308,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     );
   }
 
-  // Menampilkan informasi dasar movie dalam kartu - DIMODIFIKASI untuk include createdAt
+  // Menampilkan informasi dasar restaurant dalam kartu
   Widget _buildBasicInfoCard() {
     return Card(
       elevation: 6,
@@ -314,7 +318,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // Rating dan Tahun Rilis
+            // Rating dan Kota
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -322,50 +326,16 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                   icon: Icons.star_rounded,
                   iconColor: Colors.amber.shade600,
                   label: 'Rating',
-                  value: '${_movie.rating}/10',
+                  value: '${_restaurant.rating}/5.0', // Assuming rating out of 5
                 ),
                 _buildInfoItem(
-                  icon: Icons.calendar_today,
+                  icon: Icons.location_city,
                   iconColor: secondaryColor,
-                  label: 'Rilis',
-                  value: _movie.releaseDate,
+                  label: 'Kota',
+                  value: _restaurant.city,
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            const Divider(color: Color(0xFFE0E0E0)),
-            const SizedBox(height: 16),
-            // Durasi dan Bahasa
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildInfoItem(
-                  icon: Icons.access_time,
-                  iconColor: primaryColor,
-                  label: 'Durasi',
-                  value: _movie.duration,
-                ),
-                _buildInfoItem(
-                  icon: Icons.language,
-                  iconColor: accentColor,
-                  label: 'Bahasa',
-                  value: _movie.language,
-                ),
-              ],
-            ),
-            // Tambahkan divider dan createdAt jika data tersedia
-            if (_movie.createdAt != null && _movie.createdAt!.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Divider(color: Color(0xFFE0E0E0)),
-              const SizedBox(height: 16),
-              // CreatedAt - centered karena hanya satu item
-              _buildInfoItem(
-                icon: Icons.schedule,
-                iconColor: Colors.green.shade600,
-                label: 'Ditambahkan',
-                value: _formatCreatedAt(_movie.createdAt),
-              ),
-            ],
           ],
         ),
       ),
@@ -404,7 +374,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     );
   }
 
-  // Menampilkan deskripsi movie dalam kartu
+  // Menampilkan deskripsi restaurant dalam kartu
   Widget _buildDescriptionCard() {
     return Card(
       elevation: 6,
@@ -413,7 +383,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Text(
-          _movie.description,
+          _restaurant.description,
           style: TextStyle(
             fontSize: 16,
             color: primaryColor,
@@ -425,8 +395,35 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     );
   }
 
-  // Menampilkan daftar genre movie sebagai chip
-  Widget _buildGenresCard() {
+  // Menampilkan alamat restaurant dalam kartu
+  Widget _buildAddressCard() {
+    return Card(
+      elevation: 6,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Icon(Icons.map, color: primaryColor, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _restaurant.address,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: primaryColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Menampilkan daftar kategori restaurant sebagai chip
+  Widget _buildCategoriesCard() {
     return Card(
       elevation: 6,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -436,21 +433,21 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
         child: Wrap(
           spacing: 12,
           runSpacing: 8,
-          children: _movie.genres!.map((genre) {
+          children: _restaurant.categories!.map((category) {
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: _getGenreColor(genre).withOpacity(0.1),
+                color: _getCategoryColor(category.name).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: _getGenreColor(genre).withOpacity(0.3),
+                  color: _getCategoryColor(category.name).withOpacity(0.3),
                   width: 1,
                 ),
               ),
               child: Text(
-                genre,
+                category.name,
                 style: TextStyle(
-                  color: _getGenreColor(genre),
+                  color: _getCategoryColor(category.name),
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
@@ -462,8 +459,8 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     );
   }
 
-  // Menampilkan daftar pemeran
-  Widget _buildCastCard() {
+  // Menampilkan daftar menu (makanan dan minuman)
+  Widget _buildMenusCard() {
     return Card(
       elevation: 6,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -472,20 +469,99 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: _movie.cast!.map((actor) {
+          children: [
+            if (_restaurant.menus?.foods != null && _restaurant.menus!.foods!.isNotEmpty) ...[
+              Text(
+                'Makanan:',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 10,
+                runSpacing: 6,
+                children: _restaurant.menus!.foods!.map((food) => Chip(
+                  label: Text(food.name),
+                  backgroundColor: lightBackgroundColor,
+                  labelStyle: TextStyle(color: primaryColor),
+                )).toList(),
+              ),
+              const SizedBox(height: 16),
+            ],
+            if (_restaurant.menus?.drinks != null && _restaurant.menus!.drinks!.isNotEmpty) ...[
+              Text(
+                'Minuman:',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 10,
+                runSpacing: 6,
+                children: _restaurant.menus!.drinks!.map((drink) => Chip(
+                  label: Text(drink.name),
+                  backgroundColor: lightBackgroundColor,
+                  labelStyle: TextStyle(color: primaryColor),
+                )).toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Menampilkan ulasan pelanggan
+  Widget _buildCustomerReviewsCard() {
+    return Card(
+      elevation: 6,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: _restaurant.customerReviews!.map((review) {
             return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.person, color: secondaryColor, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      actor,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: primaryColor,
+                  Row(
+                    children: [
+                      Icon(Icons.person_pin, color: secondaryColor, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        review.name,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: primaryColor,
+                        ),
                       ),
+                      const Spacer(),
+                      Text(
+                        _formatDate(review.date),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: primaryColor.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    review.review,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: primaryColor,
+                      fontStyle: FontStyle.italic,
                     ),
                   ),
                 ],
@@ -497,58 +573,23 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     );
   }
 
-  // Menampilkan sutradara
-  Widget _buildDirectorCard() {
-    return Card(
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Icon(Icons.movie_creation, color: primaryColor, size: 24),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                _movie.director!,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: primaryColor,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Fungsi helper untuk mendapatkan warna berdasarkan genre
-  Color _getGenreColor(String genre) {
-    switch (genre.toLowerCase()) {
-      case 'action':
-        return Colors.red.shade700;
-      case 'comedy':
-        return Colors.orange.shade700;
-      case 'drama':
-        return Colors.blue.shade700;
-      case 'horror':
-        return Colors.purple.shade700;
-      case 'romance':
-        return Colors.pink.shade700;
-      case 'thriller':
-        return Colors.grey.shade700;
-      case 'sci-fi':
-      case 'science fiction':
-        return Colors.cyan.shade700;
-      case 'fantasy':
-        return Colors.indigo.shade700;
-      case 'adventure':
+  // Fungsi helper untuk mendapatkan warna berdasarkan kategori
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'italian':
         return Colors.green.shade700;
-      case 'mystery':
+      case 'japanese':
+        return Colors.red.shade700;
+      case 'western':
+        return Colors.blue.shade700;
+      case 'asian':
+        return Colors.orange.shade700;
+      case 'fast food':
         return Colors.brown.shade700;
+      case 'cafe':
+        return Colors.teal.shade700;
+      case 'sushi':
+        return Colors.indigo.shade700;
       default:
         return primaryColor;
     }

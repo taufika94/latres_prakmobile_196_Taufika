@@ -159,7 +159,7 @@ class _AuthPageState extends State<AuthPage> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons.movie, // Ikon terkait makanan
+                            Icons.restaurant, // Ikon terkait makanan
                             size: 90,
                             color: primaryColor, // Warna ikon
                           ),

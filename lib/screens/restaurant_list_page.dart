@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
-import '../movie/movie.dart';
-import 'movie_detail_page.dart';
+import '../restaurant/restaurant.dart'; // Make sure this path is correct
+import 'restaurant_detail_page.dart'; // Make sure this path is correct
 
 // Definisi Warna dari Palet yang Diberikan
 const Color primaryColor = Color(0xFF8D6B94); // Ungu tua/abu-abu
@@ -11,24 +11,24 @@ const Color accentColor = Color(0xFFC3A29E); // Coklat muda/salmon
 const Color lightBackgroundColor = Color(0xFFE8DBC5); // Krem muda
 const Color lightestBackgroundColor = Color(0xFFF4E9CE); // Hampir putih
 
-class MovieListPage extends StatefulWidget {
-  const MovieListPage({super.key});
+class RestaurantListPage extends StatefulWidget {
+  const RestaurantListPage({super.key});
 
   @override
-  State<MovieListPage> createState() => _MovieListPageState();
+  State<RestaurantListPage> createState() => _RestaurantListPageState();
 }
 
-class _MovieListPageState extends State<MovieListPage> {
-  final List<Movie> _movies = [];
-  final List<Movie> _allMovies = []; // Menyimpan semua data movie
+class _RestaurantListPageState extends State<RestaurantListPage> {
+  final List<Restaurant> _restaurants = [];
+  final List<Restaurant> _allRestaurants = []; // Menyimpan semua data restaurant
   bool _isLoading = true;
   String _username = 'User';
   String _errorMessage = '';
   bool _hasError = false;
 
   // Filter variables
-  String _selectedGenre = 'Semua';
-  Set<String> _availableGenres = {'Semua'};
+  String _selectedCategory = 'Semua';
+  Set<String> _availableCategories = {'Semua'};
   bool _isSearching = false;
   String _searchQuery = '';
 
@@ -39,7 +39,7 @@ class _MovieListPageState extends State<MovieListPage> {
   }
 
   Future<void> _loadInitialData() async {
-    await Future.wait([_loadUsername(), _loadMovies()]);
+    await Future.wait([_loadUsername(), _loadRestaurants()]);
   }
 
   Future<void> _loadUsername() async {
@@ -53,7 +53,7 @@ class _MovieListPageState extends State<MovieListPage> {
     }
   }
 
-  Future<void> _loadMovies() async {
+  Future<void> _loadRestaurants() async {
     if (mounted) {
       setState(() {
         _isLoading = true;
@@ -63,19 +63,19 @@ class _MovieListPageState extends State<MovieListPage> {
     }
 
     try {
-      final data = await ApiService.getMovies(); // Pastikan method ini ada di ApiService
+      final data = await ApiService.getRestaurants(); // Updated API call
       if (mounted) {
         setState(() {
-          _allMovies.clear();
-          _allMovies.addAll(data);
-          _movies.clear();
-          _movies.addAll(data);
+          _allRestaurants.clear();
+          _allRestaurants.addAll(data);
+          _restaurants.clear();
+          _restaurants.addAll(data);
           _hasError = false;
-          _extractGenres();
+          _extractCategories();
         });
       }
     } catch (e) {
-      print('Error loading Movies: $e');
+      print('Error loading Restaurants: $e');
       if (mounted) {
         setState(() {
           _errorMessage = "Gagal memuat data: ${e.toString()}";
@@ -89,29 +89,28 @@ class _MovieListPageState extends State<MovieListPage> {
     }
   }
 
-  void _extractGenres() {
-    Set<String> genres = {'Semua'};
-    
-    // Extract genres from all movies
-    for (Movie movie in _allMovies) {
-      if (movie.genres != null) {
-        for (String genre in movie.genres!) {
-          genres.add(genre.trim());
-        }
-      }
+  void _extractCategories() {
+    Set<String> categories = {'Semua'};
+
+    // Extract categories from all restaurants
+    for (Restaurant restaurant in _allRestaurants) {
+      // Assuming Restaurant model has a list of categories or similar field
+      // If your Restaurant model doesn't have categories directly, you might need to adjust this.
+      // For simplicity, using city as a 'category' for now.
+      categories.add(restaurant.city.trim());
     }
 
     setState(() {
-      _availableGenres = genres;
+      _availableCategories = categories;
     });
   }
 
-  Future<void> _searchMoviesByGenre(String genre) async {
-    if (genre == 'Semua') {
+  Future<void> _searchRestaurantsByCategory(String category) async {
+    if (category == 'Semua') {
       setState(() {
-        _movies.clear();
-        _movies.addAll(_allMovies);
-        _selectedGenre = genre;
+        _restaurants.clear();
+        _restaurants.addAll(_allRestaurants);
+        _selectedCategory = category;
         _isSearching = false;
         _searchQuery = '';
       });
@@ -120,35 +119,31 @@ class _MovieListPageState extends State<MovieListPage> {
 
     setState(() {
       _isSearching = true;
-      _selectedGenre = genre;
-      _searchQuery = genre;
+      _selectedCategory = category;
+      _searchQuery = category;
     });
 
     try {
-      // Jika ada endpoint search, gunakan ini
-      // final searchResults = await ApiService.searchMovies(genre);
-      
-      // Untuk sementara, gunakan filter lokal
-      final filteredResults = _allMovies.where((movie) {
-        if (movie.genres != null) {
-          return movie.genres!.any((g) => 
-            g.toLowerCase().contains(genre.toLowerCase()));
-        }
-        return false;
+      // If there's a search endpoint, use it
+      // final searchResults = await ApiService.searchRestaurants(category);
+
+      // For now, use local filter (assuming city is the filterable category)
+      final filteredResults = _allRestaurants.where((restaurant) {
+        return restaurant.city.toLowerCase().contains(category.toLowerCase());
       }).toList();
 
       if (mounted) {
         setState(() {
-          _movies.clear();
-          _movies.addAll(filteredResults);
+          _restaurants.clear();
+          _restaurants.addAll(filteredResults);
           _hasError = false;
         });
       }
     } catch (e) {
-      print('Error searching movies: $e');
+      print('Error searching restaurants: $e');
       if (mounted) {
         setState(() {
-          _errorMessage = "Gagal mencari film: ${e.toString()}";
+          _errorMessage = "Gagal mencari restoran: ${e.toString()}";
           _hasError = true;
         });
       }
@@ -215,7 +210,7 @@ class _MovieListPageState extends State<MovieListPage> {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    'Temukan film favoritmu di sini.',
+                    'Temukan restoran favoritmu di sini.',
                     style: TextStyle(
                       fontSize: 16,
                       color: const Color.fromARGB(255, 255, 244, 233)
@@ -240,7 +235,7 @@ class _MovieListPageState extends State<MovieListPage> {
               Icons.refresh,
               color: const Color.fromARGB(255, 255, 244, 233),
             ),
-            onPressed: _loadMovies,
+            onPressed: _loadRestaurants,
           ),
           PopupMenuButton<String>(
             icon: Icon(
@@ -274,7 +269,7 @@ class _MovieListPageState extends State<MovieListPage> {
           ),
           Column(
             children: [
-              _buildGenreFilter(),
+              _buildCategoryFilter(),
               Expanded(child: _buildBody()),
             ],
           ),
@@ -283,14 +278,14 @@ class _MovieListPageState extends State<MovieListPage> {
     );
   }
 
-  Widget _buildGenreFilter() {
+  Widget _buildCategoryFilter() {
     return Container(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Filter berdasarkan genre:',
+            'Filter berdasarkan kota:',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -298,20 +293,20 @@ class _MovieListPageState extends State<MovieListPage> {
             ),
           ),
           const SizedBox(height: 8),
-          Container(
+          SizedBox(
             height: 45,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: _availableGenres.length,
+              itemCount: _availableCategories.length,
               itemBuilder: (context, index) {
-                final genre = _availableGenres.elementAt(index);
-                final isSelected = _selectedGenre == genre;
+                final category = _availableCategories.elementAt(index);
+                final isSelected = _selectedCategory == category;
 
                 return Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: FilterChip(
                     label: Text(
-                      genre,
+                      category,
                       style: TextStyle(
                         color: isSelected ? Colors.white : primaryColor,
                         fontWeight: isSelected
@@ -322,7 +317,7 @@ class _MovieListPageState extends State<MovieListPage> {
                     selected: isSelected,
                     onSelected: (selected) {
                       if (selected) {
-                        _searchMoviesByGenre(genre);
+                        _searchRestaurantsByCategory(category);
                       }
                     },
                     backgroundColor: lightBackgroundColor,
@@ -344,7 +339,7 @@ class _MovieListPageState extends State<MovieListPage> {
               },
             ),
           ),
-          if (_searchQuery.isNotEmpty && _selectedGenre != 'Semua')
+          if (_searchQuery.isNotEmpty && _selectedCategory != 'Semua')
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: Row(
@@ -359,7 +354,7 @@ class _MovieListPageState extends State<MovieListPage> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '(${_movies.length} film)',
+                    '(${_restaurants.length} restoran)',
                     style: TextStyle(
                       fontSize: 14,
                       color: secondaryColor,
@@ -375,7 +370,7 @@ class _MovieListPageState extends State<MovieListPage> {
   }
 
   Widget _buildBody() {
-    if (_isLoading && _movies.isEmpty) {
+    if (_isLoading && _restaurants.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -383,7 +378,7 @@ class _MovieListPageState extends State<MovieListPage> {
             CircularProgressIndicator(color: secondaryColor),
             const SizedBox(height: 16),
             Text(
-              'Memuat data film...',
+              'Memuat data restoran...',
               style: TextStyle(color: primaryColor.withOpacity(0.7)),
             ),
           ],
@@ -399,7 +394,7 @@ class _MovieListPageState extends State<MovieListPage> {
             CircularProgressIndicator(color: secondaryColor),
             const SizedBox(height: 16),
             Text(
-              'Mencari Film Genre $_selectedGenre...',
+              'Mencari Restoran di $_selectedCategory...',
               style: TextStyle(color: primaryColor.withOpacity(0.7)),
             ),
           ],
@@ -440,10 +435,10 @@ class _MovieListPageState extends State<MovieListPage> {
             const SizedBox(height: 24),
             _buildActionButton(
               onPressed: () {
-                if (_selectedGenre == 'Semua') {
-                  _loadMovies();
+                if (_selectedCategory == 'Semua') {
+                  _loadRestaurants();
                 } else {
-                  _searchMoviesByGenre(_selectedGenre);
+                  _searchRestaurantsByCategory(_selectedCategory);
                 }
               },
               label: 'Coba Lagi',
@@ -455,17 +450,17 @@ class _MovieListPageState extends State<MovieListPage> {
       );
     }
 
-    if (_movies.isEmpty) {
+    if (_restaurants.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.movie, size: 60, color: accentColor),
+            Icon(Icons.restaurant, size: 60, color: accentColor),
             const SizedBox(height: 20),
             Text(
-              _selectedGenre == 'Semua'
-                  ? 'Belum ada film ditemukan.'
-                  : 'Tidak ada film dengan genre "$_selectedGenre".',
+              _selectedCategory == 'Semua'
+                  ? 'Belum ada restoran ditemukan.'
+                  : 'Tidak ada restoran di "$_selectedCategory".',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -475,9 +470,9 @@ class _MovieListPageState extends State<MovieListPage> {
             ),
             const SizedBox(height: 10),
             Text(
-              _selectedGenre == 'Semua'
+              _selectedCategory == 'Semua'
                   ? 'Coba muat ulang atau periksa koneksi Anda.'
-                  : 'Coba pilih genre lain atau muat ulang data.',
+                  : 'Coba pilih kota lain atau muat ulang data.',
               style: TextStyle(
                 color: primaryColor.withOpacity(0.7),
                 fontSize: 14,
@@ -487,13 +482,13 @@ class _MovieListPageState extends State<MovieListPage> {
             const SizedBox(height: 24),
             _buildActionButton(
               onPressed: () {
-                if (_selectedGenre == 'Semua') {
-                  _loadMovies();
+                if (_selectedCategory == 'Semua') {
+                  _loadRestaurants();
                 } else {
-                  _searchMoviesByGenre('Semua');
+                  _searchRestaurantsByCategory('Semua');
                 }
               },
-              label: _selectedGenre == 'Semua'
+              label: _selectedCategory == 'Semua'
                   ? 'Muat Ulang'
                   : 'Tampilkan Semua',
               backgroundColor: accentColor,
@@ -506,25 +501,25 @@ class _MovieListPageState extends State<MovieListPage> {
 
     return RefreshIndicator(
       onRefresh: () async {
-        if (_selectedGenre == 'Semua') {
-          await _loadMovies();
+        if (_selectedCategory == 'Semua') {
+          await _loadRestaurants();
         } else {
-          await _searchMoviesByGenre(_selectedGenre);
+          await _searchRestaurantsByCategory(_selectedCategory);
         }
       },
       color: secondaryColor,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        itemCount: _movies.length,
+        itemCount: _restaurants.length,
         itemBuilder: (context, index) {
-          final movie = _movies[index];
-          return _buildMovieCard(movie);
+          final restaurant = _restaurants[index];
+          return _buildRestaurantCard(restaurant);
         },
       ),
     );
   }
 
-  Widget _buildMovieCard(Movie movie) {
+  Widget _buildRestaurantCard(Restaurant restaurant) {
     return Card(
       margin: const EdgeInsets.only(bottom: 20),
       elevation: 8,
@@ -536,7 +531,7 @@ class _MovieListPageState extends State<MovieListPage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => MovieDetailPage(movieId: movie.id),
+              builder: (context) => RestaurantDetailPage(restaurantId: restaurant.id),
             ),
           );
         },
@@ -548,9 +543,9 @@ class _MovieListPageState extends State<MovieListPage> {
                 top: Radius.circular(20),
               ),
               child: Hero(
-                tag: 'movieImage_${movie.id}',
+                tag: 'restaurantImage_${restaurant.id}',
                 child: Image.network(
-                  ApiService.getImageUrl(movie.imgUrl, size: 'medium'),
+                  ApiService.getImageUrl(restaurant.pictureId, size: 'medium'), // Updated
                   height: 220,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -590,7 +585,7 @@ class _MovieListPageState extends State<MovieListPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    movie.title,
+                    restaurant.name,
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -602,11 +597,11 @@ class _MovieListPageState extends State<MovieListPage> {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      Icon(Icons.calendar_today, size: 16, color: secondaryColor),
+                      Icon(Icons.location_on, size: 16, color: secondaryColor),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          movie.releaseDate,
+                          restaurant.city,
                           style: TextStyle(
                             color: primaryColor.withOpacity(0.8),
                             fontSize: 14,
@@ -623,7 +618,7 @@ class _MovieListPageState extends State<MovieListPage> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        movie.rating,
+                        restaurant.rating.toString(), // Convert double to string
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -633,62 +628,9 @@ class _MovieListPageState extends State<MovieListPage> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.access_time, size: 16, color: secondaryColor),
-                      const SizedBox(width: 8),
-                      Text(
-                        movie.duration,
-                        style: TextStyle(
-                          color: primaryColor.withOpacity(0.8),
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Icon(Icons.language, size: 16, color: secondaryColor),
-                      const SizedBox(width: 8),
-                      Text(
-                        movie.language,
-                        style: TextStyle(
-                          color: primaryColor.withOpacity(0.8),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Tampilkan genre
-                  if (movie.genres != null && movie.genres!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: movie.genres!.map((genre) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _getGenreColor(genre).withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: _getGenreColor(genre).withOpacity(0.5),
-                                width: 1,
-                              ),
-                            ),
-                            child: Text(
-                              genre,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: _getGenreColor(genre),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
+                  // Removed genre display as it's not applicable to restaurants directly.
+                  // If you have a 'category' or 'cuisine' list in your Restaurant model,
+                  // you can add similar logic here.
                 ],
               ),
             ),
@@ -698,33 +640,8 @@ class _MovieListPageState extends State<MovieListPage> {
     );
   }
 
-  Color _getGenreColor(String genre) {
-    switch (genre.toLowerCase()) {
-      case 'action':
-        return Colors.red.shade700;
-      case 'comedy':
-        return Colors.orange.shade700;
-      case 'drama':
-        return Colors.blue.shade700;
-      case 'horror':
-        return Colors.purple.shade700;
-      case 'romance':
-        return Colors.pink.shade700;
-      case 'thriller':
-        return Colors.grey.shade700;
-      case 'sci-fi':
-      case 'science fiction':
-        return Colors.cyan.shade700;
-      case 'fantasy':
-        return Colors.indigo.shade700;
-      case 'adventure':
-        return Colors.green.shade700;
-      case 'mystery':
-        return Colors.brown.shade700;
-      default:
-        return primaryColor;
-    }
-  }
+  // Removed _getGenreColor as it's specific to movies.
+  // If you need color coding for restaurant categories, you'd add a new function here.
 
   Widget _buildActionButton({
     required VoidCallback onPressed,
@@ -747,7 +664,7 @@ class _MovieListPageState extends State<MovieListPage> {
   }
 }
 
-// Custom Painter untuk pola latar belakang
+// Custom Painter untuk pola latar belakang (tetap sama)
 class _BackgroundPatternPainter extends CustomPainter {
   final Color patternColor;
 
