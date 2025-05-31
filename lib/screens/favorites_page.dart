@@ -473,7 +473,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          restaurant.city, // Changed from movie.releaseDate to restaurant.city
+                          restaurant.city, // Changed from restpram.releaseDate to restaurant.city
                           style: TextStyle(
                             color: primaryColor.withOpacity(0.8),
                             fontSize: 14,

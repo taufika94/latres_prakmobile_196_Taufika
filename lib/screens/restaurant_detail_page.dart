@@ -43,7 +43,7 @@ class RestaurantDetailPage extends StatefulWidget {
 }
 
 class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
-  late RestaurantDetail _restaurant; // Changed from Movie to RestaurantDetail
+  late RestaurantDetail _restaurant; // Changed from restoram to RestaurantDetail
   bool _isLoading = true;
   bool _isFavorite = false;
   String _errorMessage = '';

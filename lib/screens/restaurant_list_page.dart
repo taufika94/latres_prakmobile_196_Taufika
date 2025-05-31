@@ -640,7 +640,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
     );
   }
 
-  // Removed _getGenreColor as it's specific to movies.
+  // Removed _getGenreColor as it's specific to restoran.
   // If you need color coding for restaurant categories, you'd add a new function here.
 
   Widget _buildActionButton({

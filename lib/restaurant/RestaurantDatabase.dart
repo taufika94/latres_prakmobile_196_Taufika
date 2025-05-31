@@ -1,4 +1,4 @@
-// lib/restaurant/restaurant_database.dart (rename from movie_database.dart)
+// lib/restaurant/restaurant_database.dart (rename from restoran_database.dart)
 import 'package:hive/hive.dart';
 import 'package:app/restaurant/restaurant.dart'; // Import the new Restaurant model
 
